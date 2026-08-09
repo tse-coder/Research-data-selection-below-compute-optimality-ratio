@@ -1,0 +1,24 @@
+# Track ONLY the experiment code. Everything else is ignored.
+
+# Ignore everything by default
+*
+
+# Re-include directories so git can descend (contents still ignored unless negated)
+!*/
+!03_experiment/
+!03_experiment/code/
+
+# Track only the code files under 03_experiment/code/
+!03_experiment/code/*.py
+!03_experiment/code/requirements.txt
+!03_experiment/code/.gitignore
+
+# Python artifacts (defensive; already covered by the default ignore)
+__pycache__/
+*.pyc
+
+# Generated/runtime artifacts under code/
+03_experiment/code/data/
+03_experiment/code/.venv/
+03_experiment/code/venv/
+03_experiment/code/__pycache__/
