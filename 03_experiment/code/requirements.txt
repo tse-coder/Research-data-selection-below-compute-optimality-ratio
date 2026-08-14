@@ -4,3 +4,10 @@ peft>=0.10
 datasets>=2.18
 numpy>=1.26
 matplotlib>=3.8
+
+# Do NOT install torchao. We use no quantization anywhere in this plan, but
+# some peft versions probe torchao availability during LoRA dispatch and
+# raise ImportError if a too-old torchao happens to be present (seen on
+# Colab's preinstalled 0.10.0). If torchao ends up installed in the
+# environment, uninstall it rather than upgrading it:
+#   pip uninstall -y torchao

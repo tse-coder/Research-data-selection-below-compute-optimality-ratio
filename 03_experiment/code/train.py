@@ -163,6 +163,10 @@ def run(method: str, k: int, seed: int) -> dict:
     trainer.train()
     training_runtime_s = time.perf_counter() - t0
 
+    adapter_dir = common.RUNS_DIR / f"{method}_k{k}_seed{seed}_adapter"
+    model.save_pretrained(adapter_dir)
+    print(f"Saved LoRA adapter to {adapter_dir}")
+
     peak_mem_gb = None
     if torch.cuda.is_available():
         peak_mem_gb = float(torch.cuda.max_memory_allocated() / 1e9)
