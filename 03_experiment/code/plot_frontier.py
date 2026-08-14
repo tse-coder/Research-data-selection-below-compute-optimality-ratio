@@ -32,8 +32,18 @@ def main():
         print("No completed runs found under results/runs/.")
         return
 
-    colors = {"random": "#1f77b4", "length_filtered": "#ff7f0e", "representation": "#2ca02c"}
-    markers = {"random": "o", "length_filtered": "s", "representation": "^"}
+    colors = {
+        "random": "#1f77b4",
+        "length_filtered": "#ff7f0e",
+        "representation": "#2ca02c",
+        common.GRADIENT_NORM_METHOD: "#d62728",
+    }
+    markers = {
+        "random": "o",
+        "length_filtered": "s",
+        "representation": "^",
+        common.GRADIENT_NORM_METHOD: "D",
+    }
 
     fig, ax = plt.subplots(figsize=(9, 6))
     for method in colors:

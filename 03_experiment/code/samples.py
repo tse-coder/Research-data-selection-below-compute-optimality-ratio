@@ -24,6 +24,11 @@ N_SAMPLES = 5
 MAX_NEW_TOKENS = 128
 GEN_SEED = 42
 
+CLOSING_NOTE = (
+    "---\nAll of the above is explicitly anecdotal (plan §Required outputs); "
+    "no formal metric is derived from it."
+)
+
 
 def load_run_files() -> list[dict]:
     runs = []
@@ -47,14 +52,35 @@ def build_prompt(r: dict) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate anecdotal samples for all completed runs.")
+    parser = argparse.ArgumentParser(description="Generate anecdotal samples for completed runs.")
     parser.add_argument("--max-new-tokens", type=int, default=MAX_NEW_TOKENS)
+    parser.add_argument(
+        "--only-method",
+        action="append",
+        default=None,
+        help="Only generate sections for this method (repeatable); "
+             "defaults to all completed runs",
+    )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append new sections to an existing samples.md instead of "
+             "regenerating the whole file (keeps existing content untouched)",
+    )
     args = parser.parse_args()
 
     runs = load_run_files()
     if not runs:
         print("No completed runs found under results/runs/. Run run_sweep.py first.")
         return
+    if args.only_method:
+        runs = [r for r in runs if r["method"] in args.only_method]
+        if not runs:
+            print(f"No runs found for method(s) {args.only_method}.")
+            return
+
+    out_path = common.RESULTS_DIR / "samples.md"
+    existing_text = out_path.read_text() if args.append and out_path.exists() else None
 
     eval_rows = common.load_eval()
     prompts = [build_prompt(r) for r in eval_rows[:N_SAMPLES]]
@@ -80,18 +106,25 @@ def main():
         )
         return tokenizer.decode(out[0][enc["input_ids"].shape[1]:], skip_special_tokens=True).strip()
 
-    lines = [
-        "# Anecdotal inspection only, not a formal metric",
-        "",
-        f"{len(prompts)} eval-set instructions; each row shows the base model's and one",
-        "per-condition fine-tuned model's continuation. Shuffle before close reading if",
-        f"time allows. Generated with seed {GEN_SEED}, do_sample, top_p=0.9, temperature=0.7.",
-        "",
-    ]
-
-    with torch.no_grad():
-        base_outputs = [generate(base, p) for p in prompts]
-    base.eval()
+    lines = []
+    if existing_text is not None:
+        body = existing_text.rstrip()
+        if body.endswith(CLOSING_NOTE):
+            body = body[: -len(CLOSING_NOTE)].rstrip()
+        lines.append(body)
+        lines.append("")
+    else:
+        with torch.no_grad():
+            base_outputs = [generate(base, p) for p in prompts]
+        base.eval()
+        lines = [
+            "# Anecdotal inspection only, not a formal metric",
+            "",
+            f"{len(prompts)} eval-set instructions; each row shows the base model's and one",
+            "per-condition fine-tuned model's continuation. Shuffle before close reading if",
+            f"time allows. Generated with seed {GEN_SEED}, do_sample, top_p=0.9, temperature=0.7.",
+            "",
+        ]
 
     for run in runs:
         name = f"{run['method']} k={run['k']} seed={run['seed']}"
@@ -107,6 +140,9 @@ def main():
         model.eval()
         with torch.no_grad():
             outputs = [generate(model, p) for p in prompts]
+        if "base_outputs" not in locals():
+            base_outputs = [generate(base, p) for p in prompts]
+            base.eval()
         for i, (p, o, bo) in enumerate(zip(prompts, outputs, base_outputs)):
             inst = p.split("### Instruction:\n")[1].split("\n\n")[0]
             lines.append(f"### Sample {i + 1} — instruction: {inst!r}")
@@ -117,13 +153,10 @@ def main():
         del model
         torch.cuda.empty_cache()
 
-    lines.append("---")
-    lines.append("All of the above is explicitly anecdotal (plan §Required outputs); "
-                 "no formal metric is derived from it.")
+    lines.append(CLOSING_NOTE)
 
-    out_path = common.RESULTS_DIR / "samples.md"
-    out_path.write_text("\n".join(lines))
-    print(f"Wrote {out_path}")
+    out_path.write_text("\n".join(lines) + "\n")
+    print(f"Wrote {out_path}" + (" (appended)" if existing_text is not None else ""))
 
 
 if __name__ == "__main__":

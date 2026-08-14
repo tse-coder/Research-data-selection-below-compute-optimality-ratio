@@ -211,7 +211,7 @@ def run(method: str, k: int, seed: int) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="LoRA fine-tune on a selected subset and evaluate.")
-    parser.add_argument("--method", required=True, choices=common.PRIMARY_METHODS + common.STRETCH_METHODS)
+    parser.add_argument("--method", required=True, choices=common.PRIMARY_METHODS + common.STRETCH_METHODS + [common.GRADIENT_NORM_METHOD])
     parser.add_argument("--k", type=int, default=common.PRIMARY_K)
     parser.add_argument("--seed", type=int, default=common.SPLIT_SEED)
     args = parser.parse_args()

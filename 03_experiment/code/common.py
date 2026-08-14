@@ -50,6 +50,7 @@ NEAR_DUP_CAND_CAP = 2000
 
 PRIMARY_METHODS = ["random", "length_filtered", "representation"]
 STRETCH_METHODS = ["proxy_loss"]
+GRADIENT_NORM_METHOD = "gradient_norm"
 PRIMARY_K = 800
 SECONDARY_K = 2000
 EXTRA_SEED = 123
