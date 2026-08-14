@@ -26,7 +26,7 @@ TARGET_MODEL = "EleutherAI/pythia-410m"
 LORA_RANK = 8
 LORA_ALPHA = 16
 LORA_DROPOUT = 0.05
-LORA_TARGET_MODULES = ["q_proj", "v_proj"]
+LORA_TARGET_MODULES = ["query_key_value"]
 
 NUM_EPOCHS = 3
 LEARNING_RATE = 1e-4

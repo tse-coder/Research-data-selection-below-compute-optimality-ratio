@@ -2,7 +2,9 @@
 fixed 800-example held-out split.
 
 Fixed variables (do not change across conditions): Pythia-410m + LoRA rank 8 on
-q_proj/v_proj, alpha 16, dropout 0.05; 3 epochs; LR 1e-4 cosine; batch size and
+query_key_value (Pythia/GPT-NeoX's fused attention projection; the plan's
+q_proj/v_proj naming assumed a Llama-style module layout), alpha 16, dropout
+0.05; 3 epochs; LR 1e-4 cosine; batch size and
 max sequence length fixed once and logged; same eval split for every run.
 
 Output: results/runs/{method}_k{k}_seed{seed}.json with eval loss (full-sequence
