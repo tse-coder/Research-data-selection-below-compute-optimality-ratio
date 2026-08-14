@@ -132,7 +132,7 @@ def load_selection(method: str, k: int, seed: int) -> dict:
     path = SELECTIONS_DIR / f"{method}_k{k}_seed{seed}.json"
     if not path.exists():
         raise FileNotFoundError(
-            f"{path} missing; run select.py --method {method} --k {k} --seed {seed}"
+            f"{path} missing; run selection.py --method {method} --k {k} --seed {seed}"
         )
     with open(path) as f:
         return json.load(f)

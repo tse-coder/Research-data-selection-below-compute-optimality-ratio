@@ -23,7 +23,7 @@ import numpy as np
 import common
 import prepare_data
 import score_pool
-import select
+import selection
 import train
 
 
@@ -57,7 +57,7 @@ def main():
     plan = build_plan()
     selection_records = []
     for item in plan:
-        rec = select.run_selection(item["method"], item["k"], item["seed"])
+        rec = selection.run_selection(item["method"], item["k"], item["seed"])
         selection_records.append(rec)
         print(f"selection [{rec['method']} k={rec['k']} seed={rec['seed']}] "
               f"runtime={rec['selection_runtime_s']:.3f}s tokens={rec['selected_token_count_effective']}")
