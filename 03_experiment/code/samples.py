@@ -85,7 +85,7 @@ def main():
         "",
         f"{len(prompts)} eval-set instructions; each row shows the base model's and one",
         "per-condition fine-tuned model's continuation. Shuffle before close reading if",
-        "time allows. Generated with seed {GEN_SEED}, do_sample, top_p=0.9, temperature=0.7.",
+        f"time allows. Generated with seed {GEN_SEED}, do_sample, top_p=0.9, temperature=0.7.",
         "",
     ]
 
