@@ -13,6 +13,9 @@
 !03_experiment/code/requirements.txt
 !03_experiment/code/.gitignore
 
+# Track the root README only
+!/README.md
+
 # Python artifacts (defensive; already covered by the default ignore)
 __pycache__/
 *.pyc
