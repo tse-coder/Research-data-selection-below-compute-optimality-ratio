@@ -1,16 +1,14 @@
-"""One-time shared setup cost: load Pythia-160m frozen once, extract
-final-hidden-layer, attention-mask-aware mean-pooled, L2-normalized
-representations for every pool example, and save them to data/.
+"""One-time shared setup: frozen Pythia-160m extraction over the pool.
 
-Also optionally computes Pythia-160m's mean per-token loss per pool example
-(--with-proxy-loss) for the stretch proxy-loss selection method.
+Extracts final-hidden-layer, attention-mask-aware mean-pooled, L2-normalized
+representations for every pool example (data/pool_reprs.npy), optionally also
+mean per-token proxy losses (--with-proxy-loss, stretch method only).
 
-The extraction runtime measured here is the shared one-time setup cost and is
-NOT charged per-method (see plan Metrics section).
+The extraction runtime is the shared one-time setup cost and is NOT charged
+per selection method.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import time
 
@@ -19,25 +17,23 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import common
+from src import config
 
 
-def get_device():
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    return torch.device("cpu")
+def get_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def load_texts(pool: list[dict]) -> list[str]:
     return [
-        common.format_example(r["instruction"], r.get("input", ""), r.get("output", ""))
+        config.format_example(r["instruction"], r.get("input", ""), r.get("output", ""))
         for r in pool
     ]
 
 
 @torch.no_grad()
 def extract_reprs(
-    model, tokenizer, texts, device, batch_size=common.SCORE_BATCH_SIZE, max_len=common.MAX_SEQ_LEN
+    model, tokenizer, texts, device, batch_size=config.SCORE_BATCH_SIZE, max_len=config.MAX_SEQ_LEN
 ) -> np.ndarray:
     model.eval()
     reprs = []
@@ -61,7 +57,7 @@ def extract_reprs(
 
 @torch.no_grad()
 def compute_proxy_losses(
-    model, tokenizer, texts, device, batch_size=common.SCORE_BATCH_SIZE, max_len=common.MAX_SEQ_LEN
+    model, tokenizer, texts, device, batch_size=config.SCORE_BATCH_SIZE, max_len=config.MAX_SEQ_LEN
 ) -> np.ndarray:
     model.eval()
     losses = []
@@ -92,34 +88,23 @@ def compute_proxy_losses(
     return np.concatenate(losses, axis=0)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Extract frozen Pythia-160m pool representations (one-time shared setup)."
-    )
-    parser.add_argument("--force", action="store_true", help="Recompute even if output exists")
-    parser.add_argument(
-        "--with-proxy-loss",
-        action="store_true",
-        help="Also compute mean per-token proxy loss per pool example (for stretch proxy-loss selection)",
-    )
-    args = parser.parse_args()
-
-    common.ensure_dirs()
-    repr_path = common.DATA_DIR / "pool_reprs.npy"
-    loss_path = common.DATA_DIR / "pool_proxy_losses.npy"
-    if not args.force and repr_path.exists() and (not args.with_proxy_loss or loss_path.exists()):
+def run(force: bool = False, with_proxy_loss: bool = False) -> None:
+    config.ensure_dirs()
+    repr_path = config.DATA_DIR / "pool_reprs.npy"
+    loss_path = config.DATA_DIR / "pool_proxy_losses.npy"
+    if not force and repr_path.exists() and (not with_proxy_loss or loss_path.exists()):
         print("Scoring output already present; use --force to recompute.")
         return
 
-    pool = common.load_pool()
+    pool = config.load_pool()
     texts = load_texts(pool)
     device = get_device()
     print(f"Device: {device}")
 
     t_model = time.perf_counter()
-    tokenizer = AutoTokenizer.from_pretrained(common.TOKENIZER_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(config.TOKENIZER_NAME)
     model = AutoModelForCausalLM.from_pretrained(
-        common.PROXY_MODEL, output_hidden_states=True
+        config.PROXY_MODEL, output_hidden_states=True
     ).to(device)
     model.eval()
     model_load_s = time.perf_counter() - t_model
@@ -131,7 +116,7 @@ def main():
     np.save(repr_path, reprs.astype(np.float32))
     print(f"Saved {repr_path} shape={reprs.shape}")
 
-    if args.with_proxy_loss:
+    if with_proxy_loss:
         t_loss = time.perf_counter()
         losses = compute_proxy_losses(model, tokenizer, texts, device)
         loss_s = time.perf_counter() - t_loss
@@ -139,21 +124,21 @@ def main():
         print(f"Saved {loss_path} shape={losses.shape} proxy-loss compute {loss_s:.1f}s")
 
     meta = {
-        "model": common.PROXY_MODEL,
+        "model": config.PROXY_MODEL,
         "pool_size": len(pool),
-        "batch_size": common.SCORE_BATCH_SIZE,
-        "max_seq_len": common.MAX_SEQ_LEN,
-        "tokenizer": common.TOKENIZER_NAME,
+        "batch_size": config.SCORE_BATCH_SIZE,
+        "max_seq_len": config.MAX_SEQ_LEN,
+        "tokenizer": config.TOKENIZER_NAME,
         "device": str(device),
         "pooling": "final hidden layer, attention-mask-aware mean, L2-normalized",
         "model_load_s": model_load_s,
         "extract_runtime_s": extract_s,
-        "with_proxy_loss": args.with_proxy_loss,
+        "with_proxy_loss": with_proxy_loss,
     }
-    common.save_json(meta, common.DATA_DIR / "scoring_meta.json")
+    config.save_json(meta, config.DATA_DIR / "scoring_meta.json")
     print(json.dumps(meta, indent=2))
     print(f"Shared one-time scoring setup runtime (extraction only): {extract_s:.1f}s")
 
 
 if __name__ == "__main__":
-    main()
+    run()

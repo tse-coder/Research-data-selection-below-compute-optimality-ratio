@@ -1,27 +1,32 @@
-# Track ONLY the experiment code. Everything else is ignored.
+# Track ONLY the delivered package, runner, packaging files, and README.
 
 # Ignore everything by default
 *
 
 # Re-include directories so git can descend (contents still ignored unless negated)
 !*/
-!03_experiment/
-!03_experiment/code/
 
-# Track only the code files under 03_experiment/code/
-!03_experiment/code/*.py
-!03_experiment/code/requirements.txt
-!03_experiment/code/.gitignore
-
-# Track the root README only
+# Track the deliverable at the repo root
+!/pyproject.toml
+!/requirements.txt
 !/README.md
+!/Makefile
+!src/
+!src/**/
+!src/*.py
+!src/**/*.py
 
-# Python artifacts (defensive; already covered by the default ignore)
+# Python artifacts
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 
-# Generated/runtime artifacts under code/
-03_experiment/code/data/
-03_experiment/code/.venv/
-03_experiment/code/venv/
-03_experiment/code/__pycache__/
+# Local artifact dirs produced by the package (structure kept via .gitkeep)
+artifacts/**
+results/**
+!artifacts/**/
+!artifacts/**/.gitkeep
+!results/**/
+!results/**/.gitkeep

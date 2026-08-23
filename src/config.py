@@ -1,16 +1,21 @@
-"""Shared config and helpers for the data-efficiency experiment.
+"""Shared configuration: constants, paths, prompt template, JSON helpers.
 
-Fixed-variable values are defined once here and logged into every run record so
-the "fixed once, logged, not tuned" requirement of the plan is met.
+Every experimental number is defined once here and logged into run records
+(the "fixed once, logged, not tuned" rule). Artifact locations default to
+<repo>/artifacts/{data,selections} and <repo>/results and can be overridden
+with the SRC_DATA_DIR / SRC_RESULTS_DIR environment variables.
 """
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
-CODE_DIR = Path(__file__).resolve().parent
-DATA_DIR = CODE_DIR / "data"
-RESULTS_DIR = CODE_DIR.parent / "results"
+PACKAGE_DIR = Path(__file__).resolve().parent
+REPO_ROOT = PACKAGE_DIR.parent
+
+DATA_DIR = Path(os.environ.get("SRC_DATA_DIR", REPO_ROOT / "artifacts" / "data"))
+RESULTS_DIR = Path(os.environ.get("SRC_RESULTS_DIR", REPO_ROOT / "results"))
 RUNS_DIR = RESULTS_DIR / "runs"
 SELECTIONS_DIR = DATA_DIR / "selections"
 
@@ -39,7 +44,7 @@ TRAIN_SEED = 42
 MAX_SEQ_LEN = 512
 TRUNCATION = True
 PADDING = "batch"  # per-batch padding, left-truncated to MAX_SEQ_LEN
-SCORE_BATCH_SIZE = 32  # fixed once and logged (pool representation extraction)
+SCORE_BATCH_SIZE = 32
 
 BOOTSTRAP_N = 2000
 BOOTSTRAP_SEED = 42
@@ -51,6 +56,7 @@ NEAR_DUP_CAND_CAP = 2000
 PRIMARY_METHODS = ["random", "length_filtered", "representation"]
 STRETCH_METHODS = ["proxy_loss"]
 GRADIENT_NORM_METHOD = "gradient_norm"
+ALL_METHODS = PRIMARY_METHODS + STRETCH_METHODS + [GRADIENT_NORM_METHOD]
 PRIMARY_K = 800
 SECONDARY_K = 2000
 EXTRA_SEED = 123
@@ -107,7 +113,7 @@ def ensure_dirs() -> None:
 def load_pool() -> list[dict]:
     path = DATA_DIR / "pool.jsonl"
     if not path.exists():
-        raise FileNotFoundError(f"{path} missing; run prepare_data.py first")
+        raise FileNotFoundError(f"{path} missing; run `python -m src prepare` first")
     with open(path) as f:
         return [json.loads(line) for line in f]
 
@@ -115,7 +121,7 @@ def load_pool() -> list[dict]:
 def load_eval() -> list[dict]:
     path = DATA_DIR / "eval.jsonl"
     if not path.exists():
-        raise FileNotFoundError(f"{path} missing; run prepare_data.py first")
+        raise FileNotFoundError(f"{path} missing; run `python -m src prepare` first")
     with open(path) as f:
         return [json.loads(line) for line in f]
 
@@ -125,7 +131,7 @@ def load_token_counts() -> list[int]:
 
     path = DATA_DIR / "pool_token_counts.npy"
     if not path.exists():
-        raise FileNotFoundError(f"{path} missing; run prepare_data.py first")
+        raise FileNotFoundError(f"{path} missing; run `python -m src prepare` first")
     return np.load(path).astype(int).tolist()
 
 
@@ -133,7 +139,7 @@ def load_selection(method: str, k: int, seed: int) -> dict:
     path = SELECTIONS_DIR / f"{method}_k{k}_seed{seed}.json"
     if not path.exists():
         raise FileNotFoundError(
-            f"{path} missing; run selection.py --method {method} --k {k} --seed {seed}"
+            f"{path} missing; run `python -m src select --method {method} --k {k} --seed {seed}`"
         )
     with open(path) as f:
         return json.load(f)
